@@ -108,6 +108,7 @@ cmsis_dsp_empty.o: ../cmsis_dsp_empty.c \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_systick.h \
  C:/Users/hp\ pc/workspace_ccstheia/Winter_Camp_Training_Project1/driver/fun.h \
+ C:/Users/hp\ pc/workspace_ccstheia/Winter_Camp_Training_Project1/driver/proc.h \
  C:/Users/hp\ pc/workspace_ccstheia/Winter_Camp_Training_Project1/driver/VCA810.h
 D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math_types.h:
@@ -216,4 +217,5 @@ D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/dl_wwdt.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_interrupt.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_systick.h:
 C:/Users/hp\ pc/workspace_ccstheia/Winter_Camp_Training_Project1/driver/fun.h:
+C:/Users/hp\ pc/workspace_ccstheia/Winter_Camp_Training_Project1/driver/proc.h:
 C:/Users/hp\ pc/workspace_ccstheia/Winter_Camp_Training_Project1/driver/VCA810.h:

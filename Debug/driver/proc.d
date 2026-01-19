@@ -1,6 +1,6 @@
 # FIXED
 
-driver/fun.o: ../driver/fun.c ../driver/fun.h \
+driver/proc.o: ../driver/proc.c ../driver/proc.h \
  ti_msp_dl_config.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/devices/msp/msp.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/devices/DeviceFamily.h \
@@ -84,30 +84,8 @@ driver/fun.o: ../driver/fun.c ../driver/fun.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/dl_wwdt.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_systick.h \
- ../driver/VCA810.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math_types.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/Core/Include/cmsis_compiler.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math_memory.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/none.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/utils.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/basic_math_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/interpolation_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/bayes_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/statistics_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/fast_math_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/matrix_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/complex_math_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/controller_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/support_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/distance_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/svm_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/svm_defines.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/transform_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/filtering_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/quaternion_math_functions.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/window_functions.h
-../driver/fun.h:
+ ../driver/VCA810.h ../driver/fun.h
+../driver/proc.h:
 ti_msp_dl_config.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/devices/msp/msp.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/devices/DeviceFamily.h:
@@ -192,25 +170,4 @@ D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/dl_wwdt.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_interrupt.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_systick.h:
 ../driver/VCA810.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math_types.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/Core/Include/cmsis_compiler.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/arm_math_memory.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/none.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/utils.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/basic_math_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/interpolation_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/bayes_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/statistics_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/fast_math_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/matrix_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/complex_math_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/controller_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/support_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/distance_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/svm_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/svm_defines.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/transform_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/filtering_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/quaternion_math_functions.h:
-D:/ti/mspm0_sdk_2_09_00_01/source/third_party/CMSIS/DSP/Include/dsp/window_functions.h:
+../driver/fun.h:

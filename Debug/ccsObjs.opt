@@ -3,6 +3,7 @@
 "./startup_mspm0g350x_ticlang.o"
 "./driver/VCA810.o"
 "./driver/fun.o"
+"./driver/proc.o"
 -l"./device_linker.cmd"
 -ldevice.cmd.genlibs
 -llibc.a

@@ -15,6 +15,7 @@ ORDERED_OBJS += \
 "./startup_mspm0g350x_ticlang.o" \
 "./driver/VCA810.o" \
 "./driver/fun.o" \
+"./driver/proc.o" \
 $(GEN_CMDS__FLAG) \
 -Wl,-ldevice.cmd.genlibs \
 -Wl,-llibc.a \
@@ -141,8 +142,8 @@ Winter_Camp_Training_Project1.out: $(OBJS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "cmsis_dsp_empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "driver\VCA810.o" "driver\fun.o" 
-	-$(RM) "cmsis_dsp_empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "driver\VCA810.d" "driver\fun.d" 
+	-$(RM) "cmsis_dsp_empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "driver\VCA810.o" "driver\fun.o" "driver\proc.o" 
+	-$(RM) "cmsis_dsp_empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "driver\VCA810.d" "driver\fun.d" "driver\proc.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

@@ -1,190 +1,265 @@
+/* fun.c */
 #include "fun.h"
 #include "VCA810.h"
 #include "arm_math.h"
 
-// FFT 相关变量
+
+
+// 1. 频率捕获定时器 (TimerA0) 的宏名
+// 在 SysConfig 里可能是 TIMER_0_INST, CAPTURE_0_INST 等
+#define TIMER_FREQ_INST      CAPTURE_0_INST  
+
+// 2. ADC采样触发定时器 (TimerG0) 的宏名
+// 在 SysConfig 里可能是 TIMER_1_INST, TIMER_ADC_TRIG_INST 等
+// !! 千万不要和上面那个一样 !!
+#define TIMER_SAMPLE_INST    TIMER_0_INST  
+
+// ============================================================
+
+// --- 全局变量 ---
+// ADC Buffer (DMA 目标)
+volatile uint16_t gADCBuffer[FFT_LENGTH]; 
+// 标志位
+static volatile bool s_data_ready = false;
+static Signal_Info_t s_result = {0};
+
+// FFT 相关
 static arm_rfft_fast_instance_f32 S;
 static float fft_input[FFT_LENGTH];
-static float fft_output[FFT_LENGTH]; // 实数FFT输出大小与输入相同
-static float fft_mag[FFT_LENGTH / 2]; // 幅值谱大小为 N/2
-void LED_Debug(uint8_t count, uint32_t interval_ms) 
-{
-    /*注意的led是active low*/
-    // 计算 delay_cycles 需要的周期数
-    // 如果你的主频是 32MHz，请把 80000 改成 32000
-    uint32_t cycles_per_ms = 80000; 
-    uint32_t delay_val = interval_ms * cycles_per_ms;
+static float fft_output[FFT_LENGTH]; 
+static float fft_mag[FFT_LENGTH / 2]; 
 
-    for (int i = 0; i < count; i++) {
-        // 1. 亮灯
-        // 这里的 GPIO_LEDS_... 必须和你 SysConfig 里配的一致
-        DL_GPIO_clearPins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
-        // 延时 (亮的时间)
-        delay_cycles(delay_val);
+// 频率测量相关
+static volatile float s_measured_freq = 0.0f;
 
-        // 2. 灭灯
-        DL_GPIO_setPins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
-        
-        // 延时 (灭的时间，也是两次闪烁的间隔)
-        delay_cycles(delay_val);
-    }
-
-    // 3. 闪烁序列结束后，再多停顿一会儿，方便区分下一组信号
-    delay_cycles(delay_val * 2); 
-}
+// --- 内部函数声明 ---
+static void Config_Sampling_Rate(float freq);
+static void Fun_Calculate_Vpp(const uint16_t *adc_buf, uint16_t len, Signal_Info_t *info);
+static bool Fun_AutoGainControl(float current_adc_vpp);
+static void Fun_Identify_Waveform(const uint16_t *adc_buf, Signal_Info_t *info);
 
 void Fun_Init(void) {
-    // 初始化实数 FFT 实例 (256点)
     arm_rfft_fast_init_f32(&S, FFT_LENGTH);
+    // 初始化 DMA 目标地址
+    DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)&gADCBuffer[0]);
+    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
 }
 
-/* * 核心算法1：计算 Vpp 
- * 采用“平均极值法”抗噪：取最大的5个点平均，最小的5个点平均
+void Fun_Start_Sampling(void) {
+    s_data_ready = false;
+
+    // 1. 获取当前频率 (如果没有测到频率，默认 1kHz)
+    float current_freq = (s_measured_freq > 1.0f) ? s_measured_freq : 1000.0f;
+    
+    // 2. 动态调整 Timer Load 值 (操作的是 ADC 触发定时器：TimerG0)
+    Config_Sampling_Rate(current_freq);
+    
+    // 3. 复位并使能 DMA
+    DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)&gADCBuffer[0]);
+    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, FFT_LENGTH);
+    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
+    
+    // 4. 开启采样触发定时器 (操作的是 ADC 触发定时器：TimerG0)
+    DL_TimerG_startCounter(TIMER_SAMPLE_INST);
+}
+
+bool Fun_Is_Data_Ready(void) {
+    return s_data_ready;
+}
+
+Signal_Info_t Fun_Get_Result(void) {
+    // 保证频率是最新测得的
+    s_result.freq_hz = s_measured_freq;
+    return s_result;
+}
+
+// === 核心处理流程 (Process) ===
+void Fun_Process(void) {
+    // 1. 计算 Vpp
+    Fun_Calculate_Vpp((uint16_t*)gADCBuffer, FFT_LENGTH, &s_result);
+    
+    // 2. AGC 检查 (如果调整了增益，就退出，Proc层会重启采样)
+    if (Fun_AutoGainControl(s_result.vpp_adc)) {
+        return; 
+    }
+    
+    // 3. 波形识别
+    Fun_Identify_Waveform((uint16_t*)gADCBuffer, &s_result);
+}
+
+// === 频率测量中断处理 ===
+// 使用 TimerA0 (FREQ_INST)
+void Fun_Freq_Capture_Handler(void) {
+    // [修正] 使用 TIMER_FREQ_INST
+    // TimerA0 通常也是 GPTIMER 兼容，可以用 DL_TimerA 或 DL_TimerG 读取
+    // 这里使用 DL_Timer (通用) 或 DL_TimerA 更准确
+    uint32_t cap = DL_TimerA_getCaptureCompareValue(TIMER_FREQ_INST, DL_TIMER_CC_0_INDEX);
+    
+    // 清除计数器，准备下一次测量 (简单的频率计逻辑)
+    DL_TimerA_setTimerCount(TIMER_FREQ_INST, 0); 
+    
+    // 计算频率 F = TIMG_CLK / Capture
+    if (cap > 0) {
+        // 假设 TimerA0 时钟是 80MHz (需确认 SysConfig)
+        s_measured_freq = 80000000.0f / (float)cap; 
+    }
+}
+
+// === DMA 完成中断处理 ===
+void Fun_DMA_ADC_Handler(void) {
+    // 采样完成，停止触发定时器 (操作的是 ADC 触发定时器：TimerG0)
+    DL_TimerG_stopCounter(TIMER_SAMPLE_INST);
+    s_data_ready = true;
+}
+
+// === 内部算法实现 ===
+
+/*
+ * 动态配置采样率：目标 Fs = 64 * Fin
+ * 针对 80MHz 主频适配
+ * 操作对象：TimerG0 (SAMPLE_INST)
  */
-void Fun_Calculate_Vpp(const uint16_t *adc_buf, uint16_t len, Signal_Info_t *info) {
-    uint32_t sum_max = 0;
-    uint32_t sum_min = 0;
+static void Config_Sampling_Rate(float freq) {
+    // [修正] 使用 TIMER_SAMPLE_INST
+
+    // 1. 必须先停止定时器才能修改时钟配置
+    DL_TimerG_stopCounter(TIMER_SAMPLE_INST);
+
+    // 2. 计算目标采样率
+    // 策略：每周期采64点
+    uint32_t target_fs = (uint32_t)(freq * 64.0f);
     
-    // 简单排序太慢，这里使用多次遍历找 Top 5 和 Bottom 5
-    // 为了效率，这里使用简化版：先找绝对最大/最小，再在一定范围内平均
-    // 或者，最简单的抗噪：忽略 0 和 4095 (如果未饱和)，
-    // 这里采用：遍历一次找到 Max 和 Min，简单粗暴但对偶尔的脉冲噪声敏感。
-    // 改进版：
+    // 3. 硬件限制钳位
+    // 上限：2Msps (ADC极限)
+    if (target_fs > 2000000) target_fs = 2000000; 
+    // 下限：64Hz (对应 1Hz 信号)
+    if (target_fs < 64) target_fs = 64;
+
+    // 4. 计算需要的总计数值 (Total Ticks)
+    // Bus Clock = 80MHz
+    uint32_t timer_clock = 80000000; 
+    uint32_t total_ticks_needed = timer_clock / target_fs;
+
+    // 5. 准备配置结构体
+    DL_Timer_ClockConfig clockConfig;
+    clockConfig.clockSel = DL_TIMER_CLOCK_BUSCLK;
+    clockConfig.divideRatio = DL_TIMER_CLOCK_DIVIDE_1; // 默认不分频(1分频)
     
+    uint32_t load_val;
+    uint8_t  calc_prescale = 0;
+
+    // 6. 计算 Prescaler 和 Load Value
+    // TIMG 是 16位定时器，Load Value 最大 65535
+    if (total_ticks_needed <= 65535) {
+        // 情况A: 不需要预分频，直接装载
+        calc_prescale = 0;
+        load_val = total_ticks_needed;
+    } else {
+        // 情况B: 需要预分频
+        // total_ticks = (prescale + 1) * (load_val + 1)
+        
+        // 计算需要的最小分频系数 (向上取整)
+        uint32_t divider = total_ticks_needed / 65535 + 1;
+        
+        // 限制 prescale 最大为 255 (即分频 256)
+        if (divider > 256) divider = 256;
+        
+        calc_prescale = (uint8_t)(divider - 1);
+        
+        // 反推 Load Value
+        load_val = total_ticks_needed / divider;
+    }
+
+    // 填入计算出的预分频值
+    clockConfig.prescale = calc_prescale;
+
+    // 7. 应用配置
+    // 设置时钟源、分频、预分频
+    DL_Timer_setClockConfig(TIMER_SAMPLE_INST, (DL_Timer_ClockConfig *) &clockConfig);
+    
+    // 设置计数值
+    DL_TimerG_setLoadValue(TIMER_SAMPLE_INST, load_val);
+    
+    // 8. 重启定时器
+    DL_TimerG_startCounter(TIMER_SAMPLE_INST);
+}
+
+static void Fun_Calculate_Vpp(const uint16_t *adc_buf, uint16_t len, Signal_Info_t *info) {
     uint16_t max_val = 0;
     uint16_t min_val = 4095;
-    
     for(int i = 0; i < len; i++) {
         if(adc_buf[i] > max_val) max_val = adc_buf[i];
         if(adc_buf[i] < min_val) min_val = adc_buf[i];
     }
     
-    // 转换为电压
     float v_max = (max_val * ADC_VREF) / ADC_BITS;
     float v_min = (min_val * ADC_VREF) / ADC_BITS;
-    
     info->vpp_adc = v_max - v_min;
     
-    // 还原真实输入 Vpp = (ADC测得Vpp) / (当前放大倍数)
-    info->vpp_real = info->vpp_adc / VCA810_GetGainFactor();
+    // 换算为真实 mV
+    info->vpp_real_mv = (info->vpp_adc / VCA810_GetGainFactor()) * 1000.0f;
 }
 
-/*
- * 核心算法2：自动增益控制 (AGC)
- * 目标：将 ADC 采集到的 Vpp 控制在 0.8V ~ 2.8V 之间
- * 避免过小(精度不够) 或 过大(削顶)
- */
-bool Fun_AutoGainControl(float current_adc_vpp) {
-    // 获取当前增益倍数
-    float current_gain = VCA810_GetGainFactor();
+static bool Fun_AutoGainControl(float current_adc_vpp) {
+    float gain = VCA810_GetGainFactor();
     bool changed = false;
     
-    // 阈值定义
-    const float HIGH_THRESHOLD = 3.0f; // 接近 3.3V 危险
-    const float LOW_THRESHOLD  = 0.5f; // 信号太小
-    
-    // 策略：优先保证不削顶
-    if (current_adc_vpp > HIGH_THRESHOLD) {
-        // 信号太大，需要减小增益
-        // 简单逻辑：直接降一档 (需配合 vca810.c 里的 current_level 变量暴露接口，或者在此重新评估)
-        // 这里假设我们通过倍数反推：
-        if (current_gain > 30.0f)      VCA810_SetGain(VCA_GAIN_20DB);
-        else if (current_gain > 9.0f)  VCA810_SetGain(VCA_GAIN_14DB);
-        else if (current_gain > 4.0f)  VCA810_SetGain(VCA_GAIN_10DB);
-        else if (current_gain > 2.0f)  VCA810_SetGain(VCA_GAIN_0DB);
-        else if (current_gain > 0.9f)  VCA810_SetGain(VCA_GAIN_N6DB);
-        else                           VCA810_SetGain(VCA_GAIN_MIN_N40DB);
-        
+    if (current_adc_vpp > 3.0f) { // 接近饱和
+        if (gain > 30.0f)      VCA810_SetGain(VCA_GAIN_20DB);
+        else if (gain > 9.0f)  VCA810_SetGain(VCA_GAIN_14DB);
+        else if (gain > 4.0f)  VCA810_SetGain(VCA_GAIN_10DB);
+        else if (gain > 2.0f)  VCA810_SetGain(VCA_GAIN_0DB);
+        else if (gain > 0.9f)  VCA810_SetGain(VCA_GAIN_N6DB);
+        else                   VCA810_SetGain(VCA_GAIN_MIN_N40DB);
         changed = true;
-    } 
-    else if (current_adc_vpp < LOW_THRESHOLD) {
-        // 信号太小，尝试增大增益
-        // 必须判断是否已经最大了
-        if (current_gain < 0.2f)       VCA810_SetGain(VCA_GAIN_N6DB);
-        else if (current_gain < 0.6f)  VCA810_SetGain(VCA_GAIN_0DB);
-        else if (current_gain < 1.1f)  VCA810_SetGain(VCA_GAIN_10DB);
-        else if (current_gain < 3.5f)  VCA810_SetGain(VCA_GAIN_14DB);
-        else if (current_gain < 6.0f)  VCA810_SetGain(VCA_GAIN_20DB);
-        else if (current_gain < 15.0f) VCA810_SetGain(VCA_GAIN_MAX_30DB);
-        // 如果已经是 31.6倍，就不变了
-        
+    } else if (current_adc_vpp < 0.5f) { // 信号过小
+        if (gain < 0.2f)       VCA810_SetGain(VCA_GAIN_N6DB);
+        else if (gain < 0.6f)  VCA810_SetGain(VCA_GAIN_0DB);
+        else if (gain < 1.1f)  VCA810_SetGain(VCA_GAIN_10DB);
+        else if (gain < 3.5f)  VCA810_SetGain(VCA_GAIN_14DB);
+        else if (gain < 6.0f)  VCA810_SetGain(VCA_GAIN_20DB);
+        else if (gain < 15.0f) VCA810_SetGain(VCA_GAIN_MAX_30DB);
         changed = true;
     }
-    
     return changed;
 }
 
-/*
- * 核心算法3：FFT 波形识别
- * 原理：分析基波、二次谐波、三次谐波的比例
- */
-void Fun_Identify_Waveform(const uint16_t *adc_buf, Signal_Info_t *info) {
-    // 1. 数据预处理：转 float 并去直流 (减去 1.65V 偏置对应的 Code)
-    // Code 1.65V approx 2048
+static void Fun_Identify_Waveform(const uint16_t *adc_buf, Signal_Info_t *info) {
+    // 1. 去直流预处理
     for (int i = 0; i < FFT_LENGTH; i++) {
         fft_input[i] = (float)adc_buf[i] - 2048.0f; 
     }
-    
-    // 2. 执行 FFT
+    // 2. FFT运算
     arm_rfft_fast_f32(&S, fft_input, fft_output, 0);
-    
-    // 3. 计算幅值 (Modulus)
-    // arm_cmplx_mag_f32 处理复数输出，得到 N/2 个实数幅值
     arm_cmplx_mag_f32(fft_output, fft_mag, FFT_LENGTH / 2);
     
-    // 4. 寻找基波 (Fundamental)
-    // 忽略直流分量 (Index 0)，从 Index 1 开始找最大值
-    float max_mag_val = 0.0f;
-    uint32_t max_mag_idx = 0;
+    // 3. 找基波和谐波
+    float max_mag = 0.0f;
+    uint32_t idx_1st = 0;
+    // 忽略直流(index 0)，从1开始搜
+    arm_max_f32(&fft_mag[1], (FFT_LENGTH/2)-2, &max_mag, &idx_1st);
+    idx_1st += 1;
     
-    // 通常基波在 4 附近 (如果我们做了动态采样率同步，基波通常固定在第 4 bin)
-    // 搜索范围 1 到 N/2 - 10
-    arm_max_f32(&fft_mag[1], (FFT_LENGTH / 2) - 2, &max_mag_val, &max_mag_idx);
-    max_mag_idx += 1; // 因为从 &fft_mag[1] 开始搜的
+    float mag_2nd = 0, mag_3rd = 0;
+    if (idx_1st * 2 < FFT_LENGTH/2) mag_2nd = fft_mag[idx_1st * 2];
+    if (idx_1st * 3 < FFT_LENGTH/2) mag_3rd = fft_mag[idx_1st * 3];
     
-    if (max_mag_val < 10.0f) {
-        info->type = WAVE_UNKNOWN; // 信号太弱
-        return;
-    }
+    float r3 = mag_3rd / max_mag;
+    
+    if (r3 > 0.22f) info->type = WAVE_SQUARE;
+    else if (r3 > 0.05f) info->type = WAVE_TRIANGLE;
+    else info->type = WAVE_SINE;
+}
 
-    // 5. 提取谐波分量
-    float mag_1st = max_mag_val;                    // 基波
-    float mag_2nd = 0;                              // 二次谐波 (2 * f0)
-    float mag_3rd = 0;                              // 三次谐波 (3 * f0)
-    
-    uint32_t idx_2nd = max_mag_idx * 2;
-    uint32_t idx_3rd = max_mag_idx * 3;
-    
-    if (idx_2nd < (FFT_LENGTH / 2)) mag_2nd = fft_mag[idx_2nd];
-    if (idx_3rd < (FFT_LENGTH / 2)) mag_3rd = fft_mag[idx_3rd];
-    
-    // 6. 判别逻辑 (使用比率)
-    float ratio_2nd = mag_2nd / mag_1st;
-    float ratio_3rd = mag_3rd / mag_1st;
-    
-    // 调试用：可以打印 ratio_2nd 和 ratio_3rd
-    
-    // 判据 (经验值，需微调)
-    // 正弦波: 谐波极小
-    // 方波: 奇次谐波丰富 (3次谐波理论值 1/3 = 0.33), 偶次谐波小
-    // 三角波: 奇次谐波衰减快 (3次谐波理论值 1/9 = 0.11), 偶次谐波小
-    
-    if (ratio_2nd > 0.15f) {
-        // 二次谐波很大 -> 可能是锯齿波或失真严重，题目只有三种，归为 Unknown 或近似
-        info->type = WAVE_UNKNOWN; 
-    } 
-    else if (ratio_3rd > 0.22f) {
-        // 三次谐波 > 0.22 (接近 0.33) -> 方波
-        info->type = WAVE_SQUARE;
-    } 
-    else if (ratio_3rd > 0.05f) {
-        // 三次谐波在 0.05 ~ 0.22 之间 (接近 0.11) -> 三角波
-        info->type = WAVE_TRIANGLE;
-    } 
-    else {
-        // 三次谐波很小 -> 正弦波
-        info->type = WAVE_SINE;
+void LED_Debug(uint8_t count, uint32_t interval_ms) {
+    uint32_t cycles = interval_ms * 80000; // 假设80MHz
+    for (int i = 0; i < count; i++) {
+        DL_GPIO_clearPins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
+        delay_cycles(cycles);
+        DL_GPIO_setPins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
+        delay_cycles(cycles);
     }
+    delay_cycles(cycles * 2); 
 }
 
 // // 高精度测频核心代码，提高精度

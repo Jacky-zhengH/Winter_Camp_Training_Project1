@@ -33,6 +33,7 @@
 #include "arm_math.h"
 #include "ti_msp_dl_config.h"
 #include "fun.h"
+#include "proc.h"
 #include "VCA810.h"
 
 
@@ -46,5 +47,44 @@ int main(void)
     {
         DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
         delay_cycles(64000000); // 假设80MHz，这大概是0.5秒
+    }
+}
+
+//----------------------------------------------------------
+// === Interrupt Handlers ===
+
+// 1. DMA 中断 (处理 ADC 数据搬运完成)
+void DMA_IRQHandler(void) {
+    // 1. 获取当前触发的中断索引 (IIDX)
+    // 注意：只传 DMA 一个参数
+    DL_DMA_EVENT_IIDX iidx = DL_DMA_getPendingInterrupt(DMA);
+    // 2. 判断是否是通道 0 (ADC数据搬运)
+    if (iidx == DL_DMA_EVENT_IIDX_DMACH0) {
+        // 调用你的处理函数
+        Fun_DMA_ADC_Handler();
+        // 3. 清除中断
+        // 注意：这里必须用 DL_DMA_INTERRUPT_CHANNEL0 (位掩码)，不能用 IIDX
+        DL_DMA_clearInterruptStatus(DMA, DL_DMA_INTERRUPT_CHANNEL0);
+    }
+    
+    // 如果有其他 DMA 通道（比如 UART TX），可以在这里继续判断
+    // else if (iidx == DL_DMA_EVENT_IIDX_DMACH1) { ... }
+}
+
+// 2. 频率捕获中断 (TIMA0)
+void CAPTURE_0_INST_IRQHandler(void) {
+    // 检查 CC0 Down 事件 (根据 SysConfig 配置可能不同，通常是 Load/CC)
+    // 这里使用通用的 Timer 中断检查
+    if (DL_TimerA_getPendingInterrupt(CAPTURE_0_INST) == DL_TIMER_IIDX_CC0_DN) {
+        Fun_Freq_Capture_Handler();
+        DL_TimerA_clearInterruptStatus(CAPTURE_0_INST, DL_TIMER_IIDX_CC0_DN);
+    }
+}
+
+// 3. UART 中断 (处理发送结束 EOT)
+void UART_0_INST_IRQHandler(void) {
+    if (DL_UART_Main_getPendingInterrupt(UART_0_INST) == DL_UART_MAIN_IIDX_EOT_DONE) {
+        Proc_UART_Tx_Callback();
+        DL_UART_Main_clearInterruptStatus(UART_0_INST, DL_UART_MAIN_IIDX_EOT_DONE);
     }
 }

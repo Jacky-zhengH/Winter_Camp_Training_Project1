@@ -34,23 +34,18 @@ typedef struct {
 } Signal_Info_t;
 
 // --- API ---
-/**
- * @name:LED调试
- * @note:count为闪烁次数 interval_ms间隔秒数（ms）
- */
-void LED_Debug(uint8_t count, uint32_t interval_ms);
+void LED_Debug(uint8_t count, uint32_t interval_ms);//led调试
+void Fun_Init(void);//初始化函数
 
 
-
-void Fun_Init(void);
-void Fun_Start_Sampling(void); // 启动新一轮采集
-bool Fun_Is_Data_Ready(void);  // 查询是否采集完成
-void Fun_Process(void);        // 数据处理主入口
-Signal_Info_t Fun_Get_Result(void); // 获取结果
+// void Fun_Start_Sampling(void); // 启动新一轮采集
+// bool Fun_Is_Data_Ready(void);  // 查询是否采集完成
+// void Fun_Process(void);        // 数据处理主入口
+// Signal_Info_t Fun_Get_Result(void); // 获取结果
 
 
 // 中断处理接口 (供 main.c 调用)
-void Fun_DMA_ADC_Handler(void);     // ADC数据搬完中断
-void Fun_Freq_Capture_Handler(void);// 频率计捕获中断
+// void Fun_DMA_ADC_Handler(void);     // ADC数据搬完中断
+// void Fun_Freq_Capture_Handler(void);// 频率计捕获中断
 
 #endif /* FUN_H */

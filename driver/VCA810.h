@@ -8,13 +8,12 @@
 //输出引脚为                 PA15
 // 增益档位枚举
 typedef enum {
-    VCA_GAIN_MIN_N40DB = 0, // -40dB (关断/极小)
-    VCA_GAIN_N6DB,          // -6dB  (0.5x)
-    VCA_GAIN_0DB,           //  0dB  (1.0x)
-    VCA_GAIN_10DB,          // +10dB (3.16x)
-    VCA_GAIN_14DB,          // +14dB (5.0x)  <-- 新增中间档位，适配 60-1000mV 范围
-    VCA_GAIN_20DB,          // +20dB (10.0x)
-    VCA_GAIN_MAX_30DB       // +30dB (31.6x)
+    VCA_GAIN_MIN_N40DB = 0,     // -40dB (关断/极小)
+    VCA_GAIN_0DB,               //直通，增益0dB
+    VCA_GAIN_LoW,               //500-1000mV适用 放大2.1倍
+    VCA_GAIN_MIDDLE,            //200-500mV适用 放大3.7倍
+    VCA_GAIN_HIGH,              //60-200mV适用 放大7.6倍
+    VCA_GAIN_MAX_30DB           // +30dB (31.6x)
 } VCA_Level_t;
 //extern float s_current_factor;
 //----------------------------------------------------

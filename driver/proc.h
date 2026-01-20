@@ -13,6 +13,7 @@ extern volatile char uart_send_buff[UART_SEND_BUFF_SIZE];
 extern volatile uint8_t uart_tx_complete_flag;  // 初始标志为已完成（允许新任务）
 extern volatile uint8_t uart_tx_dma_complete_flag;  // 初始标志为已完成（允许新任务）
 //---------------------------------------------------
+void Proc_Init(void);
 void uart_send_cmd(const char *format, ...);
 
 // void Proc_Init(void);

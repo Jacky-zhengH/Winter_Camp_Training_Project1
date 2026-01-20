@@ -16,6 +16,16 @@ volatile uint8_t uart_tx_dma_complete_flag = 1;  // 初始标志为已完成（�
 volatile char uart_send_buff[UART_SEND_BUFF_SIZE];
 
 
+/**
+ * @name : proccess初始化函数
+ * @note : 开启UART中断和DMA_CH0启动
+ */
+void Proc_Init(void)
+{
+    NVIC_EnableIRQ(UART_0_INST_INT_IRQN);//使能中断
+    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);//启动UART_dma_ch0
+}
+
 // void Proc_Init(void) {
 //     // 设置 DMA UART TX 目标地址 (永远不变)
 //     DL_DMA_setDestAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)(&UART_0_INST->TXDATA));

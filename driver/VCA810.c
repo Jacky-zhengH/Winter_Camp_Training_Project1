@@ -12,17 +12,17 @@ typedef struct {
 
 /* * 增益表配置 
  * 输入范围 60mV ~ 1000mV
+ * 放大模块控制：0mV~2000mV 对应增益 -42dB~32dB （正相关）
  * 目标: ADC输入控制在 2.0Vpp 左右 (最大不能超过 3.0Vpp)
  * 增益曲线：需要实际测量
  */
 static const Gain_Config_t Gain_Table[] = {
-    [VCA_GAIN_MIN_N40DB] = {1950,  0.01f}, // 几乎关断
-    [VCA_GAIN_N6DB]      = {1100,  0.50f}, // 0.5倍
-    [VCA_GAIN_0DB]       = {950,   1.00f}, // 1.0倍  (适合 1000mV 输入 -> 1.0V ADC)
-    [VCA_GAIN_10DB]      = {700,   3.16f}, // 3.16倍 (适合 300mV 输入 -> 0.9V ADC)
-    [VCA_GAIN_14DB]      = {600,   5.00f}, // 5.0倍  (适合 200mV 输入 -> 1.0V ADC)
-    [VCA_GAIN_20DB]      = {450,   10.0f}, // 10倍   (适合 100mV 输入 -> 1.0V ADC)
-    [VCA_GAIN_MAX_30DB]  = {200,   31.6f}  // 31.6倍 (适合 60mV 输入 -> 1.9V ADC)
+    [VCA_GAIN_MIN_N40DB] = {200,  0.01f},   // 几乎关断
+    [VCA_GAIN_0DB]       = {1180,  0.0f},   //直通，增益0dB
+    [VCA_GAIN_LoW]       = {1350, 2.10f},   //500-1000mV适用 放大2.1倍
+    [VCA_GAIN_MIDDLE]    = {1460, 3.70f},   //200-500mV适用 放大3.7倍
+    [VCA_GAIN_HIGH]      = {1600, 7.60f},   //60-200mV适用 放大7.6倍
+    [VCA_GAIN_MAX_30DB]  = {1950, 31.6f}    // 31.6倍 
 };
 /*初始化模块并默认挡位为直通*/
 void VCA810_Init(void) {

@@ -364,7 +364,11 @@ SYSCONFIG_WEAK void SYSCFG_DL_ADC12_0_init(void)
     DL_ADC12_setSampleTime0(ADC12_0_INST,2);
     DL_ADC12_enableDMA(ADC12_0_INST);
     DL_ADC12_setDMASamplesCnt(ADC12_0_INST,0);
+    DL_ADC12_enableDMATrigger(ADC12_0_INST,(DL_ADC12_DMA_MEM0_RESULT_LOADED));
     DL_ADC12_setSubscriberChanID(ADC12_0_INST,ADC12_0_INST_SUB_CH);
+    /* Enable ADC12 interrupt */
+    DL_ADC12_clearInterruptStatus(ADC12_0_INST,(DL_ADC12_INTERRUPT_DMA_DONE));
+    DL_ADC12_enableInterrupt(ADC12_0_INST,(DL_ADC12_INTERRUPT_DMA_DONE));
     DL_ADC12_enableConversions(ADC12_0_INST);
 }
 
@@ -402,7 +406,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_COMP_0_init(void)
 static const DL_DMA_Config gDMA_CH1Config = {
     .transferMode   = DL_DMA_SINGLE_TRANSFER_MODE,
     .extendedMode   = DL_DMA_NORMAL_MODE,
-    .destIncrement  = DL_DMA_ADDR_UNCHANGED,
+    .destIncrement  = DL_DMA_ADDR_INCREMENT,
     .srcIncrement   = DL_DMA_ADDR_UNCHANGED,
     .destWidth      = DL_DMA_WIDTH_HALF_WORD,
     .srcWidth       = DL_DMA_WIDTH_HALF_WORD,

@@ -42,17 +42,13 @@ int main(void)
     int i = 0;
     SYSCFG_DL_init();
     VCA810_Init();
-    NVIC_EnableIRQ(UART_0_INST_INT_IRQN);//使能中断
-    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
+    Proc_Init();
     //------------------------------------------
     /*设置挡位*/
-    // VCA810_SetGain(VCA_GAIN_10DB);
-    // float gain=VCA810_GetGainFactor();
-    // uart_send_cmd("system gain: %.2f\r\n",gain);
-    // LED_Debug(2, 200); 
-    /*设置电压,700mV对应约3.16倍数*/
-    VCA810_SetVoltage_mV(700);
-    uart_send_cmd("system on:setVoltage");
+    VCA810_SetGain(VCA_GAIN_LoW);
+    float gain=VCA810_GetGainFactor();
+    uart_send_cmd("system gain: %.2f\r\n",gain);
+    LED_Debug(2, 200); 
     LED_Debug(3, 200);
     while (1) 
     {

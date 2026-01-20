@@ -14,7 +14,11 @@
 #define ADC_VREF        3.3f    
 #define ADC_BITS        4096.0f 
 #define BIAS_VOLTAGE    1.65f   //直流偏置电压，需要实际值 
-#define FFT_LENGTH      256     //fft采样点    
+#define FFT_LENGTH      1024     //fft采样点  
+//频率捕获定时器 (TimerA0) 
+#define TIMER_FREQ_INST      CAPTURE_0_INST  
+//ADC采样触发定时器 (TimerG0) 
+#define TIMER_SAMPLE_INST    TIMER_0_INST    
 //
 #define ms_cycle        (80000)
 // 波形类型
@@ -36,7 +40,7 @@ typedef struct {
 // --- API ---
 void LED_Debug(uint8_t count, uint32_t interval_ms);//led调试
 void Fun_Init(void);//初始化函数
-
+void Fun_Start_Sampling(void);//启动采集
 
 // void Fun_Start_Sampling(void); // 启动新一轮采集
 // bool Fun_Is_Data_Ready(void);  // 查询是否采集完成

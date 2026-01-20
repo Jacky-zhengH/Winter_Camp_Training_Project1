@@ -3,10 +3,6 @@
 #include "VCA810.h"
 #include "arm_math.h"
 
-// 1. 频率捕获定时器 (TimerA0) 
-#define TIMER_FREQ_INST      CAPTURE_0_INST  
-// 2. ADC采样触发定时器 (TimerG0) 
-#define TIMER_SAMPLE_INST    TIMER_0_INST  
 
 // ============================================================
 
@@ -53,39 +49,33 @@ void LED_Debug(uint8_t count, uint32_t interval_ms) {
 void Fun_Init(void)
 {
     //启用fft
-    arm_rfft_fast_init_f32( &S, FFT_LENGTH);
+    //arm_rfft_fast_init_f32( &S, FFT_LENGTH);
+    //初始化ADC对应DMA->源地址
+    DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, 0x40556280);//查看regsistor，用的ADC0_memory0的地址
     //初始化ADC对应DMA->目标地址
-    //DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, uint32_t srcAddr);
     DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&gADCBuffer[0]);
     DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);//使能通道
     NVIC_EnableIRQ(ADC12_0_INST_INT_IRQN);//使能adc中断
+    //DL_ADC12_startConversion(ADC12_0_INST);如果不是定时器事件触发，则需要用start转换启动
+
 }
 
+/**
+ * @name :adc+时钟触发 
+ * @note :可以动态调整采样率
+ */
+void Fun_Start_Sampling(void) {
+    s_data_ready = false;
 
-// void Fun_Init(void) {
-//     arm_rfft_fast_init_f32(&S, FFT_LENGTH);
-//     // 初始化 ADC对应DMA 目标地址
-//     DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&gADCBuffer[0]);
-//     DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);
-// }
-
-// void Fun_Start_Sampling(void) {
-//     s_data_ready = false;
-
-//     // 1. 获取当前频率 (如果没有测到频率，默认 1kHz)
-//     float current_freq = (s_measured_freq > 1.0f) ? s_measured_freq : 1000.0f;
+    // 1. 获取当前频率 (如果没有测到频率，默认 1kHz)
+    //float current_freq = (s_measured_freq > 1.0f) ? s_measured_freq : 1000.0f;
     
-//     // 2. 动态调整 Timer Load 值 (操作的是 ADC 触发定时器：TimerG0)
-//     Config_Sampling_Rate(current_freq);
+    // 2. 动态调整 Timer Load 值 (操作的是 ADC 触发定时器：TimerG0)
+    //Config_Sampling_Rate(current_freq);
     
-//     // 3. 复位并使能 DMA
-//     DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)&gADCBuffer[0]);
-//     DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, FFT_LENGTH);
-//     DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
-    
-//     // 4. 开启采样触发定时器 (操作的是 ADC 触发定时器：TimerG0)
-//     DL_TimerG_startCounter(TIMER_SAMPLE_INST);
-// }
+    // 4. 开启采样触发定时器 (操作的是 ADC 触发定时器：TimerG0)
+    DL_TimerG_startCounter(TIMER_SAMPLE_INST);
+}
 
 // bool Fun_Is_Data_Ready(void) {
 //     return s_data_ready;

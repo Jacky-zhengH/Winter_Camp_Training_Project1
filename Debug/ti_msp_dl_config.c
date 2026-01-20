@@ -275,7 +275,7 @@ static const DL_TimerG_ClockConfig gTIMER_0ClockConfig = {
 
 /*
  * Timer load value (where the counter starts from) is calculated as (timerPeriod * timerClockFreq) - 1
- * TIMER_0_INST_LOAD_VALUE = (1us * 20000000 Hz) - 1
+ * TIMER_0_INST_LOAD_VALUE = (5us * 20000000 Hz) - 1
  */
 static const DL_TimerG_TimerConfig gTIMER_0TimerConfig = {
     .period     = TIMER_0_INST_LOAD_VALUE,
@@ -355,15 +355,15 @@ SYSCONFIG_WEAK void SYSCFG_DL_ADC12_0_init(void)
 {
     DL_ADC12_setClockConfig(ADC12_0_INST, (DL_ADC12_ClockConfig *) &gADC12_0ClockConfig);
     DL_ADC12_initSingleSample(ADC12_0_INST,
-        DL_ADC12_REPEAT_MODE_DISABLED, DL_ADC12_SAMPLING_SOURCE_AUTO, DL_ADC12_TRIG_SRC_EVENT,
+        DL_ADC12_REPEAT_MODE_ENABLED, DL_ADC12_SAMPLING_SOURCE_AUTO, DL_ADC12_TRIG_SRC_EVENT,
         DL_ADC12_SAMP_CONV_RES_12_BIT, DL_ADC12_SAMP_CONV_DATA_FORMAT_UNSIGNED);
     DL_ADC12_configConversionMem(ADC12_0_INST, ADC12_0_ADCMEM_0,
         DL_ADC12_INPUT_CHAN_0, DL_ADC12_REFERENCE_VOLTAGE_VDDA, DL_ADC12_SAMPLE_TIMER_SOURCE_SCOMP0, DL_ADC12_AVERAGING_MODE_DISABLED,
-        DL_ADC12_BURN_OUT_SOURCE_DISABLED, DL_ADC12_TRIGGER_MODE_AUTO_NEXT, DL_ADC12_WINDOWS_COMP_MODE_DISABLED);
+        DL_ADC12_BURN_OUT_SOURCE_DISABLED, DL_ADC12_TRIGGER_MODE_TRIGGER_NEXT, DL_ADC12_WINDOWS_COMP_MODE_DISABLED);
     DL_ADC12_setPowerDownMode(ADC12_0_INST,DL_ADC12_POWER_DOWN_MODE_MANUAL);
     DL_ADC12_setSampleTime0(ADC12_0_INST,2);
     DL_ADC12_enableDMA(ADC12_0_INST);
-    DL_ADC12_setDMASamplesCnt(ADC12_0_INST,0);
+    DL_ADC12_setDMASamplesCnt(ADC12_0_INST,1);
     DL_ADC12_enableDMATrigger(ADC12_0_INST,(DL_ADC12_DMA_MEM0_RESULT_LOADED));
     DL_ADC12_setSubscriberChanID(ADC12_0_INST,ADC12_0_INST_SUB_CH);
     /* Enable ADC12 interrupt */
@@ -404,7 +404,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_COMP_0_init(void)
 
 
 static const DL_DMA_Config gDMA_CH1Config = {
-    .transferMode   = DL_DMA_SINGLE_TRANSFER_MODE,
+    .transferMode   = DL_DMA_FULL_CH_REPEAT_SINGLE_TRANSFER_MODE,
     .extendedMode   = DL_DMA_NORMAL_MODE,
     .destIncrement  = DL_DMA_ADDR_INCREMENT,
     .srcIncrement   = DL_DMA_ADDR_UNCHANGED,
@@ -416,7 +416,7 @@ static const DL_DMA_Config gDMA_CH1Config = {
 
 SYSCONFIG_WEAK void SYSCFG_DL_DMA_CH1_init(void)
 {
-    DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, 256);
+    DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, 1024);
     DL_DMA_initChannel(DMA, DMA_CH1_CHAN_ID , (DL_DMA_Config *) &gDMA_CH1Config);
 }
 static const DL_DMA_Config gDMA_CH0Config = {

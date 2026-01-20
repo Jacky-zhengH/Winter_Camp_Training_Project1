@@ -83,8 +83,7 @@ driver/proc.o: ../driver/proc.c ../driver/proc.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/dl_vref.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/dl_wwdt.h \
  D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_interrupt.h \
- D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_systick.h \
- ../driver/VCA810.h ../driver/fun.h
+ D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_systick.h
 ../driver/proc.h:
 ti_msp_dl_config.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/devices/msp/msp.h:
@@ -169,5 +168,3 @@ D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/dl_vref.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/dl_wwdt.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_interrupt.h:
 D:/ti/mspm0_sdk_2_09_00_01/source/ti/driverlib/m0p/dl_systick.h:
-../driver/VCA810.h:
-../driver/fun.h:

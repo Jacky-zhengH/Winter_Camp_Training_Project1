@@ -5,7 +5,7 @@
 
 // 宏定义
 #define VCA_DAC_INST        DAC0 
-
+//输出引脚为                 PA15
 // 增益档位枚举
 typedef enum {
     VCA_GAIN_MIN_N40DB = 0, // -40dB (关断/极小)
@@ -16,7 +16,8 @@ typedef enum {
     VCA_GAIN_20DB,          // +20dB (10.0x)
     VCA_GAIN_MAX_30DB       // +30dB (31.6x)
 } VCA_Level_t;
-
+//extern float s_current_factor;
+//----------------------------------------------------
 void VCA810_Init(void);
 void VCA810_SetGain(VCA_Level_t level);
 float VCA810_GetGainFactor(void);

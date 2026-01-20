@@ -24,13 +24,14 @@ static const Gain_Config_t Gain_Table[] = {
     [VCA_GAIN_20DB]      = {450,   10.0f}, // 10倍   (适合 100mV 输入 -> 1.0V ADC)
     [VCA_GAIN_MAX_30DB]  = {200,   31.6f}  // 31.6倍 (适合 60mV 输入 -> 1.9V ADC)
 };
-
+/*初始化模块并默认挡位为直通*/
 void VCA810_Init(void) {
     DL_DAC12_enable(VCA_DAC_INST);
     // 默认给一个中间增益，防止上电信号过大
     VCA810_SetGain(VCA_GAIN_0DB); 
 }
 
+/*设置输出电压,理论范围0~3.3V，上限限制到了2.5v(2500mV)*/
 void VCA810_SetVoltage_mV(uint16_t mv) {
     if(mv > 2500) mv = 2500; // 保护限制
     
@@ -41,6 +42,7 @@ void VCA810_SetVoltage_mV(uint16_t mv) {
     DL_DAC12_output12(VCA_DAC_INST, code);
 }
 
+/*设置增益挡位*/
 void VCA810_SetGain(VCA_Level_t level) {
     if(level > VCA_GAIN_MAX_30DB) level = VCA_GAIN_MAX_30DB;
     
@@ -49,7 +51,7 @@ void VCA810_SetGain(VCA_Level_t level) {
     
     VCA810_SetVoltage_mV(Gain_Table[level].dac_mv);
 }
-
+/*获取当前具体增益数值*/
 float VCA810_GetGainFactor(void) {
     return s_current_factor;
 }

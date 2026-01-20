@@ -39,52 +39,73 @@
 
 int main(void)
 {
+    int i = 0;
     SYSCFG_DL_init();
     VCA810_Init();
-    LED_Debug(2, 200); 
-    
+    NVIC_EnableIRQ(UART_0_INST_INT_IRQN);//使能中断
+    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
+    //------------------------------------------
+    /*设置挡位*/
+    // VCA810_SetGain(VCA_GAIN_10DB);
+    // float gain=VCA810_GetGainFactor();
+    // uart_send_cmd("system gain: %.2f\r\n",gain);
+    // LED_Debug(2, 200); 
+    /*设置电压,700mV对应约3.16倍数*/
+    VCA810_SetVoltage_mV(700);
+    uart_send_cmd("system on:setVoltage");
+    LED_Debug(3, 200);
     while (1) 
     {
-        DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
-        delay_cycles(64000000); // 假设80MHz，这大概是0.5秒
+        __WFI();
+        //uart_send_cmd("system count: %d\r\n",i++);
+        // DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
+        // delay_cycles(500*ms_cycle); // 假设80MHz，这大概是0.5秒
     }
 }
 
 //----------------------------------------------------------
 // === Interrupt Handlers ===
 
-// 1. DMA 中断 (处理 ADC 数据搬运完成)
-void DMA_IRQHandler(void) {
-    // 1. 获取当前触发的中断索引 (IIDX)
-    // 注意：只传 DMA 一个参数
-    DL_DMA_EVENT_IIDX iidx = DL_DMA_getPendingInterrupt(DMA);
-    // 2. 判断是否是通道 0 (ADC数据搬运)
-    if (iidx == DL_DMA_EVENT_IIDX_DMACH0) {
-        // 调用你的处理函数
-        Fun_DMA_ADC_Handler();
-        // 3. 清除中断
-        // 注意：这里必须用 DL_DMA_INTERRUPT_CHANNEL0 (位掩码)，不能用 IIDX
-        DL_DMA_clearInterruptStatus(DMA, DL_DMA_INTERRUPT_CHANNEL0);
-    }
+// // 1. DMA 中断 (处理 ADC 数据搬运完成)
+// void DMA_IRQHandler(void) {
+//     // 1. 获取当前触发的中断索引 (IIDX)
+//     // 注意：只传 DMA 一个参数
+//     DL_DMA_EVENT_IIDX iidx = DL_DMA_getPendingInterrupt(DMA);
+//     // 2. 判断是否是通道 0 (ADC数据搬运)
+//     if (iidx == DL_DMA_EVENT_IIDX_DMACH0) {
+//         // 调用你的处理函数
+//         Fun_DMA_ADC_Handler();
+//         // 3. 清除中断
+//         // 注意：这里必须用 DL_DMA_INTERRUPT_CHANNEL0 (位掩码)，不能用 IIDX
+//         DL_DMA_clearInterruptStatus(DMA, DL_DMA_INTERRUPT_CHANNEL0);
+//     }
     
-    // 如果有其他 DMA 通道（比如 UART TX），可以在这里继续判断
-    // else if (iidx == DL_DMA_EVENT_IIDX_DMACH1) { ... }
-}
+//     // 如果有其他 DMA 通道（比如 UART TX），可以在这里继续判断
+//     // else if (iidx == DL_DMA_EVENT_IIDX_DMACH1) { ... }
+// }
 
-// 2. 频率捕获中断 (TIMA0)
-void CAPTURE_0_INST_IRQHandler(void) {
-    // 检查 CC0 Down 事件 (根据 SysConfig 配置可能不同，通常是 Load/CC)
-    // 这里使用通用的 Timer 中断检查
-    if (DL_TimerA_getPendingInterrupt(CAPTURE_0_INST) == DL_TIMER_IIDX_CC0_DN) {
-        Fun_Freq_Capture_Handler();
-        DL_TimerA_clearInterruptStatus(CAPTURE_0_INST, DL_TIMER_IIDX_CC0_DN);
-    }
-}
+// // 2. 频率捕获中断 (TIMA0)
+// void CAPTURE_0_INST_IRQHandler(void) {
+//     // 检查 CC0 Down 事件 (根据 SysConfig 配置可能不同，通常是 Load/CC)
+//     // 这里使用通用的 Timer 中断检查
+//     if (DL_TimerA_getPendingInterrupt(CAPTURE_0_INST) == DL_TIMER_IIDX_CC0_DN) {
+//         Fun_Freq_Capture_Handler();
+//         DL_TimerA_clearInterruptStatus(CAPTURE_0_INST, DL_TIMER_IIDX_CC0_DN);
+//     }
+// }
 
 // 3. UART 中断 (处理发送结束 EOT)
-void UART_0_INST_IRQHandler(void) {
-    if (DL_UART_Main_getPendingInterrupt(UART_0_INST) == DL_UART_MAIN_IIDX_EOT_DONE) {
-        Proc_UART_Tx_Callback();
-        DL_UART_Main_clearInterruptStatus(UART_0_INST, DL_UART_MAIN_IIDX_EOT_DONE);
+void UART0_IRQHandler(){
+    volatile uint32_t res = DL_UART_Main_getPendingInterrupt(UART_0_INST);
+    switch (res) {
+        // case  DL_UART_IIDX_TX:{
+        //    uart_send(uart_send_buff);
+        // }break;
+        case DL_UART_IIDX_EOT_DONE:{
+            uart_tx_complete_flag = 1;
+        }break;
+        case DL_UART_MAIN_IIDX_DMA_DONE_TX:
+            uart_tx_dma_complete_flag = 1;
+        break;
     }
 }

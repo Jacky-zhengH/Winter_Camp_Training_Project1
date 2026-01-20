@@ -110,14 +110,14 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 #define UART_0_INST_FREQUENCY                                           40000000
 #define UART_0_INST_IRQHandler                                  UART0_IRQHandler
 #define UART_0_INST_INT_IRQN                                      UART0_INT_IRQn
-#define GPIO_UART_0_RX_PORT                                                GPIOA
-#define GPIO_UART_0_TX_PORT                                                GPIOA
+#define GPIO_UART_0_RX_PORT                                                GPIOB
+#define GPIO_UART_0_TX_PORT                                                GPIOB
 #define GPIO_UART_0_RX_PIN                                         DL_GPIO_PIN_1
-#define GPIO_UART_0_TX_PIN                                        DL_GPIO_PIN_10
-#define GPIO_UART_0_IOMUX_RX                                      (IOMUX_PINCM2)
-#define GPIO_UART_0_IOMUX_TX                                     (IOMUX_PINCM21)
-#define GPIO_UART_0_IOMUX_RX_FUNC                       IOMUX_PINCM2_PF_UART0_RX
-#define GPIO_UART_0_IOMUX_TX_FUNC                      IOMUX_PINCM21_PF_UART0_TX
+#define GPIO_UART_0_TX_PIN                                         DL_GPIO_PIN_0
+#define GPIO_UART_0_IOMUX_RX                                     (IOMUX_PINCM13)
+#define GPIO_UART_0_IOMUX_TX                                     (IOMUX_PINCM12)
+#define GPIO_UART_0_IOMUX_RX_FUNC                      IOMUX_PINCM13_PF_UART0_RX
+#define GPIO_UART_0_IOMUX_TX_FUNC                      IOMUX_PINCM12_PF_UART0_TX
 #define UART_0_BAUD_RATE                                                (115200)
 #define UART_0_IBRD_40_MHZ_115200_BAUD                                      (21)
 #define UART_0_FBRD_40_MHZ_115200_BAUD                                      (45)
@@ -160,11 +160,11 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 
 
 
-/* Defines for DMA_CH0 */
-#define DMA_CH0_CHAN_ID                                                      (1)
+/* Defines for DMA_CH1 */
+#define DMA_CH1_CHAN_ID                                                      (1)
 #define ADC12_0_INST_DMA_TRIGGER                      (DMA_ADC0_EVT_GEN_BD_TRIG)
-/* Defines for DMA_CH2 */
-#define DMA_CH2_CHAN_ID                                                      (0)
+/* Defines for DMA_CH0 */
+#define DMA_CH0_CHAN_ID                                                      (0)
 #define UART_0_INST_DMA_TRIGGER                              (DMA_UART0_TX_TRIG)
 
 

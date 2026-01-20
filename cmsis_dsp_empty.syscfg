@@ -65,11 +65,11 @@ ADC121.sampleTime0                       = "62.5ns";
 ADC121.configureDMA                      = true;
 ADC121.subChanID                         = 2;
 ADC121.adcPin0Config.$name               = "ti_driverlib_gpio_GPIOPinGeneric0";
-ADC121.DMA_CHANNEL.$name                 = "DMA_CH0";
 ADC121.DMA_CHANNEL.srcLength             = "HALF_WORD";
 ADC121.DMA_CHANNEL.dstLength             = "HALF_WORD";
 ADC121.DMA_CHANNEL.configureTransferSize = true;
 ADC121.DMA_CHANNEL.transferSize          = 256;
+ADC121.DMA_CHANNEL.$name                 = "DMA_CH1";
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 
@@ -121,16 +121,18 @@ TIMER1.peripheral.$assign          = "TIMG0";
 UART1.$name                          = "UART_0";
 UART1.targetBaudRate                 = 115200;
 UART1.enableFIFO                     = true;
-UART1.rxFifoThreshold                = "DL_UART_RX_FIFO_LEVEL_FULL";
-UART1.txFifoThreshold                = "DL_UART_TX_FIFO_LEVEL_EMPTY";
 UART1.enabledDMATXTriggers           = "DL_UART_DMA_INTERRUPT_TX";
+UART1.enabledInterrupts              = ["DMA_DONE_TX","EOT_DONE"];
+UART1.peripheral.$assign             = "UART0";
+UART1.peripheral.rxPin.$assign       = "PB1";
+UART1.peripheral.txPin.$assign       = "PB0";
 UART1.txPinConfig.$name              = "ti_driverlib_gpio_GPIOPinGeneric3";
 UART1.rxPinConfig.$name              = "ti_driverlib_gpio_GPIOPinGeneric4";
-UART1.DMA_CHANNEL_TX.$name           = "DMA_CH2";
 UART1.DMA_CHANNEL_TX.addressMode     = "b2f";
 UART1.DMA_CHANNEL_TX.srcLength       = "BYTE";
 UART1.DMA_CHANNEL_TX.dstLength       = "BYTE";
 UART1.DMA_CHANNEL_TX.enableInterrupt = true;
+UART1.DMA_CHANNEL_TX.$name           = "DMA_CH0";
 
 ProjectConfig.genLibCMSIS = true;
 
@@ -148,7 +150,4 @@ Board.peripheral.swdioPin.$suggestSolution       = "PA19";
 DAC12.peripheral.$suggestSolution                = "DAC0";
 DAC12.peripheral.OutPin.$suggestSolution         = "PA15";
 GPIO1.associatedPins[0].pin.$suggestSolution     = "PA0";
-UART1.peripheral.$suggestSolution                = "UART0";
-UART1.peripheral.rxPin.$suggestSolution          = "PA1";
-UART1.peripheral.txPin.$suggestSolution          = "PA10";
 UART1.DMA_CHANNEL_TX.peripheral.$suggestSolution = "DMA_CH0";

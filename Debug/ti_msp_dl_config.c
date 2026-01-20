@@ -330,12 +330,17 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_0_init(void)
     DL_UART_Main_setBaudRateDivisor(UART_0_INST, UART_0_IBRD_40_MHZ_115200_BAUD, UART_0_FBRD_40_MHZ_115200_BAUD);
 
 
+    /* Configure Interrupts */
+    DL_UART_Main_enableInterrupt(UART_0_INST,
+                                 DL_UART_MAIN_INTERRUPT_DMA_DONE_TX |
+                                 DL_UART_MAIN_INTERRUPT_EOT_DONE);
+
     /* Configure DMA Transmit Event */
     DL_UART_Main_enableDMATransmitEvent(UART_0_INST);
     /* Configure FIFOs */
     DL_UART_Main_enableFIFOs(UART_0_INST);
-    DL_UART_Main_setRXFIFOThreshold(UART_0_INST, DL_UART_RX_FIFO_LEVEL_FULL);
-    DL_UART_Main_setTXFIFOThreshold(UART_0_INST, DL_UART_TX_FIFO_LEVEL_EMPTY);
+    DL_UART_Main_setRXFIFOThreshold(UART_0_INST, DL_UART_RX_FIFO_LEVEL_1_2_FULL);
+    DL_UART_Main_setTXFIFOThreshold(UART_0_INST, DL_UART_TX_FIFO_LEVEL_1_2_EMPTY);
 
     DL_UART_Main_enable(UART_0_INST);
 }
@@ -394,7 +399,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_COMP_0_init(void)
 }
 
 
-static const DL_DMA_Config gDMA_CH0Config = {
+static const DL_DMA_Config gDMA_CH1Config = {
     .transferMode   = DL_DMA_SINGLE_TRANSFER_MODE,
     .extendedMode   = DL_DMA_NORMAL_MODE,
     .destIncrement  = DL_DMA_ADDR_UNCHANGED,
@@ -405,12 +410,12 @@ static const DL_DMA_Config gDMA_CH0Config = {
     .triggerType    = DL_DMA_TRIGGER_TYPE_EXTERNAL,
 };
 
-SYSCONFIG_WEAK void SYSCFG_DL_DMA_CH0_init(void)
+SYSCONFIG_WEAK void SYSCFG_DL_DMA_CH1_init(void)
 {
-    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, 256);
-    DL_DMA_initChannel(DMA, DMA_CH0_CHAN_ID , (DL_DMA_Config *) &gDMA_CH0Config);
+    DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, 256);
+    DL_DMA_initChannel(DMA, DMA_CH1_CHAN_ID , (DL_DMA_Config *) &gDMA_CH1Config);
 }
-static const DL_DMA_Config gDMA_CH2Config = {
+static const DL_DMA_Config gDMA_CH0Config = {
     .transferMode   = DL_DMA_SINGLE_TRANSFER_MODE,
     .extendedMode   = DL_DMA_NORMAL_MODE,
     .destIncrement  = DL_DMA_ADDR_UNCHANGED,
@@ -421,15 +426,15 @@ static const DL_DMA_Config gDMA_CH2Config = {
     .triggerType    = DL_DMA_TRIGGER_TYPE_EXTERNAL,
 };
 
-SYSCONFIG_WEAK void SYSCFG_DL_DMA_CH2_init(void)
+SYSCONFIG_WEAK void SYSCFG_DL_DMA_CH0_init(void)
 {
     DL_DMA_clearInterruptStatus(DMA, DL_DMA_INTERRUPT_CHANNEL0);
     DL_DMA_enableInterrupt(DMA, DL_DMA_INTERRUPT_CHANNEL0);
-    DL_DMA_initChannel(DMA, DMA_CH2_CHAN_ID , (DL_DMA_Config *) &gDMA_CH2Config);
+    DL_DMA_initChannel(DMA, DMA_CH0_CHAN_ID , (DL_DMA_Config *) &gDMA_CH0Config);
 }
 SYSCONFIG_WEAK void SYSCFG_DL_DMA_init(void){
+    SYSCFG_DL_DMA_CH1_init();
     SYSCFG_DL_DMA_CH0_init();
-    SYSCFG_DL_DMA_CH2_init();
 }
 
 

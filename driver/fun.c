@@ -49,7 +49,7 @@ void LED_Debug(uint8_t count, uint32_t interval_ms) {
 void Fun_Init(void)
 {
     //启用fft
-    //arm_rfft_fast_init_f32( &S, FFT_LENGTH);
+    arm_rfft_fast_init_f32( &S, FFT_LENGTH);
     //初始化ADC对应DMA->源地址
     DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, 0x40556280);//查看regsistor，用的ADC0_memory0的地址
     //初始化ADC对应DMA->目标地址

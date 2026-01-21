@@ -26,14 +26,38 @@ void Proc_Init(void)
     DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);//启动UART_dma_ch0
 }
 
-// void Proc_Init(void) {
-//     // 设置 DMA UART TX 目标地址 (永远不变)
-//     DL_DMA_setDestAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)(&UART_0_INST->TXDATA));
-//     s_is_tx_busy = false;
-    
-//     // 启动第一次采样
-//     Fun_Start_Sampling();
-// }
+
+void uart_send_cmd(const char *format, ...) {
+    //使用 snprintf 处理格式化，写入全局 buffer
+    va_list args;
+    va_start(args, format);
+    // vsnprintf 会返回生成的字符串长度,省去了 strlen
+    int len = vsnprintf((char*)uart_send_buff, UART_SEND_BUFF_SIZE, format, args);
+    va_end(args);
+    // 如果长度超过 buffer，截断处理（vsnprintf 会自动截断，但要注意 len 可能大于 size）
+    //if(len > UART_SEND_BUFF_SIZE) len = UART_SEND_BUFF_SIZE;
+    //当串口发送完毕后，才可再次发送
+    if(uart_tx_complete_flag)
+    {
+        //设置源地址
+        DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)(uart_send_buff));
+        //设置目标地址
+        DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)(&UART_0_INST->TXDATA));
+        //设置要搬运的字节数
+        DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, len);
+        //使能DMA通道
+        DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
+        uart_tx_complete_flag    = 0;
+        uart_tx_dma_complete_flag = 0;
+    }
+}
+
+
+
+
+
+//=======================================================================
+//=======================================================================
 
 // void Proc_Task(void) {
 //     // 轮询：数据是否准备好？
@@ -77,57 +101,3 @@ void Proc_Init(void)
 //         Fun_Start_Sampling();
 //     }
 // }
-
-// --- UART DMA 发送逻辑 ---
-
-// void Proc_Printf(const char *format, ...) {
-//     if (s_is_tx_busy) return; // 如果忙，丢弃
-    
-//     va_list args;
-//     va_start(args, format);
-//     int len = vsnprintf((char *)s_tx_buffer, UART_TX_BUF_SIZE, format, args);
-//     va_end(args);
-    
-//     if (len > 0) {
-//         UART_DMA_Start(s_tx_buffer, (uint16_t)len);
-//     }
-// }
-
-// static void UART_DMA_Start(uint8_t *buf, uint16_t len) {
-//     // 等待上一次 DMA 确实结束 (双重保险)
-//     while(s_is_tx_busy);
-    
-//     s_is_tx_busy = true;
-//     DL_DMA_setSrcAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)buf);
-//     DL_DMA_setTransferSize(DMA, DMA_CH2_CHAN_ID, len);
-//     DL_DMA_enableChannel(DMA, DMA_CH2_CHAN_ID);
-// }
-
-// void Proc_UART_Tx_Callback(void) {
-//     s_is_tx_busy = false;
-// }
-
-void uart_send_cmd(const char *format, ...) {
-    //使用 snprintf 处理格式化，写入全局 buffer
-    va_list args;
-    va_start(args, format);
-    // vsnprintf 会返回生成的字符串长度,省去了 strlen
-    int len = vsnprintf((char*)uart_send_buff, UART_SEND_BUFF_SIZE, format, args);
-    va_end(args);
-    // 如果长度超过 buffer，截断处理（vsnprintf 会自动截断，但要注意 len 可能大于 size）
-    //if(len > UART_SEND_BUFF_SIZE) len = UART_SEND_BUFF_SIZE;
-    //当串口发送完毕后，才可再次发送
-    if(uart_tx_complete_flag)
-    {
-        //设置源地址
-        DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)(uart_send_buff));
-        //设置目标地址
-        DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)(&UART_0_INST->TXDATA));
-        //设置要搬运的字节数
-        DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, len);
-        //使能DMA通道
-        DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
-        uart_tx_complete_flag    = 0;
-        uart_tx_dma_complete_flag = 0;
-    }
-}

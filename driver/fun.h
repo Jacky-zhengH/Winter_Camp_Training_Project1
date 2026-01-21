@@ -39,7 +39,7 @@ typedef struct {
 
 // --- API ---
 void LED_Debug(uint8_t count, uint32_t interval_ms);//led调试
-void Fun_Init(void);//初始化函数
+//void Fun_Init(void);//初始化函数
 void Fun_Start_Sampling(void);//启动采集
 
 // void Fun_Start_Sampling(void); // 启动新一轮采集

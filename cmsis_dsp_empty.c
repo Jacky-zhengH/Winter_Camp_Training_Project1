@@ -35,48 +35,78 @@
 #include "fun.h"
 #include "proc.h"
 #include "VCA810.h"
-extern volatile uint16_t gADCBuffer[FFT_LENGTH];
-
+/*------变量定义-------*/
+uint16_t gADCBuffer[FFT_LENGTH]; //gadc存放在这里
+volatile uint32_t CaptureVal[1024];
+volatile uint16_t CaptureIndex;
 
 int main(void)
 {
-    int i = 0;
+    // volatile uint32_t i = 0;
+    // i = (uint32_t)(& (ADC0->ULLMEM.MEMRES[0]));
     SYSCFG_DL_init();
     VCA810_Init();
     Proc_Init();
-    Fun_Init();
     //------------------------------------------
+    /*配置定时器触发dma*/
+    //初始化ADC对应DMA->源地址
+    DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, 0x40556280);//查看regsistor，用的ADC0_memory0的地址为0x40556280
+    //初始化ADC对应DMA->目标地址
+    DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&gADCBuffer[0]);
+    DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);//使能通道
+    NVIC_EnableIRQ(ADC12_0_INST_INT_IRQN);//使能adc中断
+    //------------------------------------------
+    /*配置定时器捕获模式+比较器*/
+    DL_COMP_enable(COMP_0_INST);//开启比较器
+    NVIC_EnableIRQ(CAPTURE_0_INST_INT_IRQN);//使能捕获定时器中断
+    //------------------------------------------
+    /*启动定时器开始捕获*/
+    DL_TimerA_startCounter(TIMER_FREQ_INST);
+    /*启动定时器开始采集*/
+    DL_TimerG_startCounter(TIMER_SAMPLE_INST);
     /*设置挡位*/
-    VCA810_SetGain(VCA_GAIN_LoW);
-    float gain=VCA810_GetGainFactor();
-    uart_send_cmd("system gain: %.2f\r\n",gain);
-    LED_Debug(2, 200); 
-    LED_Debug(3, 200);
+    // VCA810_SetGain(VCA_GAIN_LoW);
+    // float gain=VCA810_GetGainFactor();
+    // uart_send_cmd("system gain: %.2f\r\n",gain);
+    // LED_Debug(2, 200); 
     while (1) 
     {
         __WFI();
         //uart_send_cmd("system count: %d\r\n",i++);
         // DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
         // delay_cycles(500*ms_cycle); // 假设80MHz，这大概是0.5秒
+        //
+        if(CaptureIndex == 1024){
+            uint32_t sum = 0 ;
+            for(uint16_t i =0 ;i <1024;i++)
+                sum += CaptureVal[i];
+            sum /= 1024;
+            uart_send_cmd("fre:%.2f KHz\r\n",40000.0/sum);
+            CaptureIndex = 0;
+            delay_cycles(ms_cycle*1000);
+        }
     }
 }
 
 //----------------------------------------------------------
+//----------------------------------------------------------
 // === Interrupt Handlers ===
+//adc中断
 void ADC12_0_INST_IRQHandler(){
     switch (DL_ADC12_getPendingInterrupt(ADC12_0_INST)) {
         case DL_ADC12_IIDX_DMA_DONE:
             DL_TimerG_stopCounter(TIMER_SAMPLE_INST);
             //中断处理
-            //proccess
+            //proccess start
+            //LED_Debug(3, 200);
             __BKPT();
+            //proccess end
             Fun_Start_Sampling();
             break;
         default:
             break;
     }
 }
-
 
 // UART 中断 (处理发送结束 EOT)
 void UART0_IRQHandler(){
@@ -91,5 +121,26 @@ void UART0_IRQHandler(){
         case DL_UART_MAIN_IIDX_DMA_DONE_TX:
             uart_tx_dma_complete_flag = 1;
         break;
+    }
+}
+
+void CAPTURE_0_INST_IRQHandler(){
+    switch (DL_TimerA_getPendingInterrupt(CAPTURE_0_INST)) {
+        case DL_TIMERA_IIDX_CC0_DN://向下计数完成中断
+            if(CaptureIndex == 1024) 
+            {   
+                // uint32_t sum = 0 ;
+                // for(uint16_t i =0 ;i <1024;i++)
+                // sum += CaptureVal[i];
+                // sum /= 1024;
+                // uart_send_cmd("fre:%.2f KHz\r\n",40000.0/sum);
+                // CaptureIndex = 0;
+                break;//如果计算满了就跳出在轮询函数中处理
+            }
+            CaptureVal[CaptureIndex++] = CAPTURE_0_INST_LOAD_VALUE -  (DL_TimerA_getCaptureCompareValue
+                                                                        (CAPTURE_0_INST,DL_TIMER_CC_0_INDEX));
+            break;
+        default:
+            break;
     }
 }

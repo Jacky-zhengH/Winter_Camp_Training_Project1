@@ -120,6 +120,9 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
     DL_GPIO_initPeripheralInputFunction(
         GPIO_UART_0_IOMUX_RX, GPIO_UART_0_IOMUX_RX_FUNC);
 
+    DL_GPIO_initPeripheralOutputFunction(
+        GPIO_COMP_0_IOMUX_OUT, GPIO_COMP_0_IOMUX_OUT_FUNC);
+
     DL_GPIO_initDigitalOutput(GPIO_LEDS_LED1_IOMUX);
 
     DL_GPIO_setPins(GPIO_LEDS_PORT, GPIO_LEDS_LED1_PIN);
@@ -223,19 +226,19 @@ SYSCONFIG_WEAK void SYSCFG_DL_SYSCTL_init(void)
 
 
 /*
- * Timer clock configuration to be sourced by BUSCLK /  (80000000 Hz)
+ * Timer clock configuration to be sourced by BUSCLK /  (40000000 Hz)
  * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
- *   80000000 Hz = 80000000 Hz / (1 * (0 + 1))
+ *   40000000 Hz = 40000000 Hz / (2 * (0 + 1))
  */
 static const DL_TimerA_ClockConfig gCAPTURE_0ClockConfig = {
     .clockSel    = DL_TIMER_CLOCK_BUSCLK,
-    .divideRatio = DL_TIMER_CLOCK_DIVIDE_1,
+    .divideRatio = DL_TIMER_CLOCK_DIVIDE_2,
     .prescale = 0U
 };
 
 /*
  * Timer load value (where the counter starts from) is calculated as (timerPeriod * timerClockFreq) - 1
- * CAPTURE_0_INST_LOAD_VALUE = (819.20us * 80000000 Hz) - 1
+ * CAPTURE_0_INST_LOAD_VALUE = (1.6384 ms * 40000000 Hz) - 1
  */
 static const DL_TimerA_CaptureTriggerConfig gCAPTURE_0CaptureConfig = {
     .captureMode    = DL_TIMER_CAPTURE_MODE_PERIOD_CAPTURE,
@@ -250,6 +253,9 @@ SYSCONFIG_WEAK void SYSCFG_DL_CAPTURE_0_init(void) {
 
     DL_TimerA_initCaptureTriggerMode(CAPTURE_0_INST,
         (DL_TimerA_CaptureTriggerConfig *) &gCAPTURE_0CaptureConfig);
+    DL_TimerA_enableInterrupt(CAPTURE_0_INST , DL_TIMERA_INTERRUPT_CC0_DN_EVENT);
+
+    NVIC_SetPriority(CAPTURE_0_INST_INT_IRQN, 0);
     DL_TimerA_enableClock(CAPTURE_0_INST);
 
     DL_TimerA_setExternalTriggerEvent(CAPTURE_0_INST,
@@ -378,7 +384,7 @@ static const DL_COMP_Config gCOMP_0Config = {
     .mode          = DL_COMP_MODE_FAST,
     .negChannel    = DL_COMP_IMSEL_CHANNEL_0,
     .posChannel    = DL_COMP_IPSEL_CHANNEL_0,
-    .hysteresis    = DL_COMP_HYSTERESIS_30,
+    .hysteresis    = DL_COMP_HYSTERESIS_20,
     .polarity      = DL_COMP_POLARITY_NON_INV
 };
 static const DL_COMP_RefVoltageConfig gCOMP_0VRefConfig = {

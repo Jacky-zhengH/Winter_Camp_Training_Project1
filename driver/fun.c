@@ -8,19 +8,17 @@
 
 // --- 全局变量 ---
 // ADC Buffer (DMA 目标)
-volatile uint16_t gADCBuffer[FFT_LENGTH]; 
+extern uint16_t gADCBuffer[FFT_LENGTH]; 
 // 标志位
 static volatile bool s_data_ready = false;
 static Signal_Info_t s_result = {0};
 
 // FFT 相关
 static arm_rfft_fast_instance_f32 S;
-// static float fft_input[FFT_LENGTH];
-// static float fft_output[FFT_LENGTH]; 
-// static float fft_mag[FFT_LENGTH / 2]; 
+static float32_t fft_input[FFT_LENGTH];
+static float32_t fft_output[FFT_LENGTH]; 
+static float32_t fft_mag[FFT_LENGTH / 2]; 
 
-// 频率测量相关
-static volatile float s_measured_freq = 0.0f;
 // ============================================================
 // // --- 内部函数声明 ---
 // static void Config_Sampling_Rate(float freq);
@@ -43,24 +41,6 @@ void LED_Debug(uint8_t count, uint32_t interval_ms) {
 }
 
 /**
- * @name: 初始化函数
- * @note：ADC+DMA，FFT
- */
-void Fun_Init(void)
-{
-    //启用fft
-    arm_rfft_fast_init_f32( &S, FFT_LENGTH);
-    //初始化ADC对应DMA->源地址
-    DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, 0x40556280);//查看regsistor，用的ADC0_memory0的地址
-    //初始化ADC对应DMA->目标地址
-    DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&gADCBuffer[0]);
-    DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);//使能通道
-    NVIC_EnableIRQ(ADC12_0_INST_INT_IRQN);//使能adc中断
-    //DL_ADC12_startConversion(ADC12_0_INST);如果不是定时器事件触发，则需要用start转换启动
-
-}
-
-/**
  * @name :adc+时钟触发 
  * @note :可以动态调整采样率
  */
@@ -69,13 +49,130 @@ void Fun_Start_Sampling(void) {
 
     // 1. 获取当前频率 (如果没有测到频率，默认 1kHz)
     //float current_freq = (s_measured_freq > 1.0f) ? s_measured_freq : 1000.0f;
-    
     // 2. 动态调整 Timer Load 值 (操作的是 ADC 触发定时器：TimerG0)
     //Config_Sampling_Rate(current_freq);
-    
     // 4. 开启采样触发定时器 (操作的是 ADC 触发定时器：TimerG0)
     DL_TimerG_startCounter(TIMER_SAMPLE_INST);
 }
+
+//DSP--FFT 识别波形
+void DSP_Init() {
+    arm_rfft_fast_init_f32(&S, FFT_LENGTH);
+}
+//具体算法
+void Identify_Waveform() {
+    uint32_t index_f1 = 0;
+    float32_t amp_f1 = 0.0f;
+
+    // 1. 寻找基波 (f1) - 即幅值最大的点（忽略直流分量 index 0）
+    // 为了防止低频噪点，可以从 index 1 或 2 开始找
+    arm_max_f32(&fft_mag[1], (FFT_LENGTH / 2) - 1, &amp_f1, &index_f1);
+    index_f1 += 1; // 修正索引偏移
+
+    // 计算基波频率 (Hz)
+    // Freq = index * SamplingRate / FFT_LENGTH
+    // float32_t freq_measured = (float32_t)index_f1 * SAMPLE_RATE_HZ / FFT_LENGTH;
+
+    // 2. 寻找 3次谐波 (f3)
+    uint32_t index_f3 = index_f1 * 3;
+    float32_t amp_f3 = 0.0f;
+    
+    // 简单的索引保护，防止越界
+    if (index_f3 < (FFT_LENGTH / 2)) {
+        // 在理论位置附近寻找峰值 (允许 ±2 的误差)
+        uint32_t search_start = (index_f3 > 2) ? (index_f3 - 2) : index_f3;
+        uint32_t search_end = (index_f3 + 2 < FFT_LENGTH/2) ? (index_f3 + 2) : (FFT_LENGTH/2 - 1);
+        uint32_t temp_idx;
+        
+        arm_max_f32(&fft_mag[search_start], (search_end - search_start + 1), &amp_f3, &temp_idx);
+    }
+
+    // 3. 计算比例并判断
+    float32_t ratio = 0.0f;
+    if (amp_f1 > 0.001f) { // 防止除以0
+        ratio = amp_f3 / amp_f1;
+    }
+
+    Wave_Type_t result = WAVE_UNKNOWN;
+
+    // 阈值设定 (根据理论值适当放宽范围)
+    // 正弦波: 3次谐波极小 (< 5%)
+    // 三角波: 3次谐波 ~ 11% (设定范围 8% - 15%)
+    // 方波:   3次谐波 ~ 33% (设定范围 20% - 45%)
+
+    if (ratio < 0.05f) {
+        result = WAVE_SINE;
+    } else if (ratio >= 0.08f && ratio <= 0.18f) {
+        result = WAVE_TRIANGLE;
+    } else if (ratio > 0.20f) {
+        result = WAVE_SQUARE;
+    }
+    
+    // 这里可以将 result 输出到显示屏或串口
+}
+
+void Perform_FFT_Analysis() {
+    // 1. 执行实数 FFT (RFFT)
+    // 结果是交错排列的复数 [Real0, Img0, Real1, Img1, ...]
+    arm_rfft_fast_f32(&S, fft_input, fft_output, 0);
+
+    // 2. 计算复数模值 (Magnitude)
+    // 结果存入 fftMagBuffer，长度为 FFT_LENGTH/2
+    arm_cmplx_mag_f32(fft_output, fft_mag, FFT_LENGTH / 2);
+    
+    // 注意：直流分量在 fftMagBuffer[0]，我们主要关注 [1] 到 [N/2-1]
+    Identify_Waveform();
+}
+
+void WaveFrom_proccess(uint16_t *gADCBuffer)
+{
+    float32_t sum = 0;
+    float32_t mean = 0;
+    float32_t min_val = 4096.0f;
+    float32_t max_val = 0.0f;
+
+    // 1. 转换为浮点数 并 计算 Vpp 和 平均值
+    for(int i = 0; i < FFT_LENGTH; i++) {
+        float32_t val = (float32_t)gADCBuffer[i];
+        fft_input[i] = val;
+        sum += val;
+        // 计算 Vpp (峰峰值)
+        if (val > max_val) max_val = val;
+        if (val < min_val) min_val = val;
+    }
+    mean = sum / FFT_LENGTH;
+    mean = sum / FFT_LENGTH;
+    float32_t Vpp_Volts = (max_val - min_val) * (3.3f / 4096.0f); // 假设参考电压3.3V，12bit ADC
+
+    // 2. 去直流 (DC Removal)
+    for(int i = 0; i < FFT_LENGTH; i++) {
+        fft_input[i] -= mean; 
+    }
+    //  加窗: 减少频谱泄漏，推荐 Hanning 窗，这会提高频率识别精度
+    //arm_mult_f32(fft_input, hanning_window_array, fft_input, FFT_LENGTH);
+    Perform_FFT_Analysis();
+}
+//=======================================================================
+//=======================================================================
+/**
+ * @name: 初始化函数
+ * @note：ADC+DMA，FFT
+ */
+// void Fun_Init(void)
+// {
+//     //启用fft
+//     arm_rfft_fast_init_f32( &S, FFT_LENGTH);
+//     //初始化ADC对应DMA->源地址
+//     DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, 0x40556280);//查看regsistor，用的ADC0_memory0的地址为0x40556280
+//     //初始化ADC对应DMA->目标地址
+//     DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&gADCBuffer[0]);
+//     DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);//使能通道
+//     NVIC_EnableIRQ(ADC12_0_INST_INT_IRQN);//使能adc中断
+//     //DL_ADC12_startConversion(ADC12_0_INST);如果不是定时器事件触发，则需要用start转换启动
+
+// }
+
+
 
 // bool Fun_Is_Data_Ready(void) {
 //     return s_data_ready;

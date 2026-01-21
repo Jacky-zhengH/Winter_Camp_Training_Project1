@@ -157,6 +157,10 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 #define GPIO_COMP_0_IOMUX_IN0P_FUNC               (IOMUX_PINCM59_PF_UNCONNECTED)
 
 
+#define GPIO_COMP_0_OUT_PORT                                               GPIOA
+#define GPIO_COMP_0_OUT_PIN                                       DL_GPIO_PIN_11
+#define GPIO_COMP_0_IOMUX_OUT                                    (IOMUX_PINCM22)
+#define GPIO_COMP_0_IOMUX_OUT_FUNC                    IOMUX_PINCM22_PF_COMP0_OUT
 
 
 
